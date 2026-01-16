@@ -73,6 +73,22 @@
             gap: 8px;
             white-space: nowrap;
         }
+        
+        .exp-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            width: 150px;
+            height: 10px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 5px;
+        }
+        .exp-bar {
+            background: #4fc3f7;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
 
         .mode-badge {
             font-size: 20px;
@@ -83,7 +99,8 @@
             box-shadow: 0 4px 0 rgba(0,0,0,0.1);
         }
         .mode-home { background: #66bb6a; border: 2px solid #2e7d32; }
-        .mode-work { background: #ef5350; border: 2px solid #c62828; }
+        .mode-work { background: #81c784; border: 2px solid #388e3c; }
+        .mode-raid { background: #ef5350; border: 2px solid #c62828; }
 
         /* Action Buttons */
         .action-btn {
@@ -100,11 +117,13 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-bottom: 5px;
         }
         .action-btn:active { transform: translateY(4px); box-shadow: none; }
         
-        .btn-go-work { background: #ffe0b2; border-color: #f57c00; color: #e65100; }
-        .btn-go-home { background: #c8e6c9; border-color: #388e3c; color: #1b5e20; }
+        .btn-go-weed { background: #c8e6c9; border-color: #388e3c; color: #1b5e20; }
+        .btn-go-raid { background: #ffcdd2; border-color: #d32f2f; color: #b71c1c; }
+        .btn-go-home { background: #fff9c4; border-color: #fbc02d; color: #f57f17; }
 
         /* Build Menu (Only visible in Home Mode) */
         #build-palette {
@@ -116,6 +135,8 @@
             gap: 10px;
             border: 3px solid #8d6e63;
             margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         .build-item {
@@ -127,9 +148,25 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: 0.2s;
+            position: relative;
         }
         .build-item:hover { background: #fff8e1; }
         .build-item.selected { background: #ffe0b2; border-color: #ff6f00; }
+        
+        .build-item.locked {
+            opacity: 0.6;
+            background: #eee;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        .lock-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #d32f2f;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+        }
         
         /* Screens */
         .modal-screen {
@@ -169,16 +206,17 @@
             background: #ff8a80;
             color: white;
             border: none;
-            padding: 12px 40px;
-            font-size: 24px;
+            padding: 12px 30px;
+            font-size: 20px;
             border-radius: 50px;
             cursor: pointer;
             font-family: 'M PLUS Rounded 1c', sans-serif;
             font-weight: 800;
             box-shadow: 0 5px 0 #d84315;
-            margin-top: 20px;
+            min-width: 140px;
         }
         .btn-primary:active { transform: translateY(5px); box-shadow: none; }
+        .btn-continue { background: #66bb6a; box-shadow: 0 5px 0 #388e3c; }
 
         .difficulty-group { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
         .diff-btn {
@@ -203,6 +241,7 @@
             background: rgba(0,0,0,0.7); color: white; padding: 20px 40px;
             border-radius: 50px; font-size: 24px; pointer-events: none;
             opacity: 0; transition: opacity 0.5s;
+            z-index: 200;
         }
 
     </style>
@@ -216,48 +255,54 @@
             <div class="hud-top">
                 <!-- Left Side: Stats -->
                 <div class="hud-left">
+                    <div class="info-box">
+                        <div>
+                            <div>👑 Lv.<span id="level-display">1</span></div>
+                            <div class="exp-container">
+                                <div id="exp-bar" class="exp-bar"></div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="info-box">💰 <span id="score">0</span> 円</div>
+                    
                     <div id="timer-display" class="info-box timer-box" style="display:none;">⏰ <span id="timer">60</span>s</div>
                     <div id="home-indicator" class="mode-badge mode-home">🏠 溫馨家園</div>
-                    <div id="work-indicator" class="mode-badge mode-work" style="display:none;">⚔️ 打工討伐中</div>
+                    <div id="work-indicator" class="mode-badge mode-work" style="display:none;">🌱 除草檢定中</div>
+                    <div id="raid-indicator" class="mode-badge mode-raid" style="display:none;">⚔️ 討伐任務中</div>
                 </div>
 
                 <!-- Right Side: Controls -->
                 <div class="hud-right">
                     <!-- Home Mode Controls -->
                     <div id="home-controls">
-                        <button class="action-btn btn-go-work" onclick="switchToWorkMode()">
-                            ⚔️ 出門打工
+                        <button class="action-btn btn-go-weed" onclick="switchToWorkMode('weed')">
+                            🌱 除草檢定
+                            <span style="font-size:12px; margin-left:5px; color:#555">(移動除草)</span>
                         </button>
+                        <button class="action-btn btn-go-raid" onclick="switchToWorkMode('raid')">
+                            ⚔️ 討伐任務
+                            <span style="font-size:12px; margin-left:5px; color:#555">(防守攻擊)</span>
+                        </button>
+                        
                         <div style="margin-top: 10px;">
                             <button class="action-btn" onclick="toggleBuildMenu()" style="width:100%; justify-content:center;">🔨 佈置家園</button>
                             <div id="build-palette">
-                                <div class="build-item selected" onclick="selectBuildItem(0)">
-                                    <span style="font-size:24px">🍄</span>
-                                    <div>蘑菇屋<br><span style="font-size:12px;color:#666">100円</span></div>
-                                </div>
-                                <div class="build-item" onclick="selectBuildItem(1)">
-                                    <span style="font-size:24px">🛏️</span>
-                                    <div>草蓆<br><span style="font-size:12px;color:#666">50円</span></div>
-                                </div>
-                                <div class="build-item" onclick="selectBuildItem(2)">
-                                    <span style="font-size:24px">🌷</span>
-                                    <div>花圃<br><span style="font-size:12px;color:#666">30円</span></div>
-                                </div>
-                                <div class="build-item" onclick="selectBuildItem(3)">
-                                    <span style="font-size:24px">🧱</span>
-                                    <div>圍牆<br><span style="font-size:12px;color:#666">20円</span></div>
-                                </div>
+                                <!-- JS will populate this -->
                             </div>
                         </div>
                     </div>
 
-                    <!-- Work Mode Controls -->
+                    <!-- Work/Raid Mode Controls -->
                     <div id="work-controls" style="display:none;">
                          <button class="action-btn btn-go-home" onclick="returnHome()">
                             🏃 逃回家
                         </button>
-                        <div class="info-box keyboard-hint" style="margin-top:10px;">⌨️ 請用英文打字</div>
+                        <div id="weed-hint" class="info-box keyboard-hint" style="margin-top:10px; display:none;">
+                             WASD 移動 / 靠近輸入注音
+                        </div>
+                        <div id="raid-hint" class="info-box keyboard-hint" style="margin-top:10px; display:none;">
+                             怪物靠近中！輸入注音攻擊
+                        </div>
                     </div>
                 </div>
             </div>
@@ -266,7 +311,7 @@
             <div id="start-screen" class="modal-screen">
                 <div class="modal-content">
                     <h1>吉伊卡哇<br>注音家園</h1>
-                    <p>佈置你的家，沒錢就去外面打工除草！</p>
+                    <p>除草賺錢，討伐升級！<br>努力把家裡裝飾得漂漂亮亮吧！</p>
                     
                     <div class="difficulty-group">
                         <div class="diff-btn" onclick="setDifficulty('easy')" id="diff-easy">🐢 慢速</div>
@@ -285,7 +330,12 @@
                             <div style="font-size:30px;">🐰</div>烏薩奇
                         </div>
                     </div>
-                    <button class="btn-primary" onclick="initGame()">進入家園</button>
+                    
+                    <!-- Buttons Container -->
+                    <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                        <button id="btn-continue" class="btn-primary btn-continue" style="display:none;" onclick="initGame(true)">讀取進度</button>
+                        <button class="btn-primary" onclick="initGame(false)">重新開始</button>
+                    </div>
                 </div>
             </div>
 
@@ -293,8 +343,8 @@
             <div id="result-screen" class="modal-screen" style="display: none;">
                 <div class="modal-content">
                     <h2 id="result-title">工作結束</h2>
-                    <p>本次打工收入: +<span id="result-income">0</span> 円</p>
-                    <!-- Fixed: Call switchToHomeMode directly to avoid loop -->
+                    <p>本次收入: +<span id="result-income">0</span> 円</p>
+                    <p>獲得經驗: +<span id="result-exp">0</span> EXP</p>
                     <button class="btn-primary" onclick="switchToHomeMode()">回到家園</button>
                 </div>
             </div>
@@ -308,9 +358,11 @@
         const ctx = canvas.getContext('2d');
 
         // --- Config ---
-        // Home Map is big, Work map is screen size
         const HOME_WIDTH = 2000;
         const HOME_HEIGHT = 2000;
+        const WEED_MAP_WIDTH = 1500;
+        const WEED_MAP_HEIGHT = 1500;
+        
         let VIEW_WIDTH = window.innerWidth;
         let VIEW_HEIGHT = window.innerHeight;
 
@@ -330,10 +382,13 @@
         const ZHUYIN_KEYS = Object.keys(ZHUYIN_MAP);
 
         const BUILD_ITEMS = [
-            { name: '蘑菇屋', cost: 100, icon: '🍄', type: 0, w: 80, h: 80 },
-            { name: '草蓆', cost: 50, icon: '🛏️', type: 1, w: 50, h: 30 },
-            { name: '花圃', cost: 30, icon: '🌷', type: 2, w: 40, h: 40 },
-            { name: '圍牆', cost: 20, icon: '🧱', type: 3, w: 40, h: 40 }
+            { name: '蘑菇屋', cost: 100, icon: '🍄', type: 0, w: 80, h: 80, unlockLv: 1 },
+            { name: '草蓆', cost: 50, icon: '🛏️', type: 1, w: 50, h: 30, unlockLv: 1 },
+            { name: '花圃', cost: 30, icon: '🌷', type: 2, w: 40, h: 40, unlockLv: 2 },
+            { name: '圍牆', cost: 20, icon: '🧱', type: 3, w: 40, h: 40, unlockLv: 2 },
+            { name: '郎拉麵', cost: 300, icon: '🍜', type: 4, w: 100, h: 80, unlockLv: 3 },
+            { name: '溫泉', cost: 500, icon: '♨️', type: 5, w: 120, h: 100, unlockLv: 5 },
+            { name: '吉伊像', cost: 1000, icon: '🗿', type: 6, w: 60, h: 100, unlockLv: 8 }
         ];
 
         const CHAR_STATS = {
@@ -343,16 +398,22 @@
         };
 
         const DIFFICULTY = {
-            easy: { spawnRate: 120, speed: 0.8 },   // Slow spawn, slow move
+            easy: { spawnRate: 120, speed: 0.8 },
             normal: { spawnRate: 80, speed: 1.5 },
             hard: { spawnRate: 40, speed: 2.5 }
         };
 
         // --- Game State ---
         let currentMode = 'MENU'; // MENU, HOME, WORK
+        let workModeType = 'weed'; // 'weed' or 'raid'
         let selectedChar = 'chiikawa';
         let selectedDiff = 'normal';
-        let score = 500; // Start with some money
+        
+        // Progression
+        let score = 500;
+        let playerLevel = 1;
+        let playerExp = 0;
+        let expToNextLevel = 100;
         
         // Home State
         let homePlayer = { x: 1000, y: 1000, facing: 1 };
@@ -362,9 +423,11 @@
         let selectedBuildIdx = 0;
 
         // Work State
+        let weedPlayer = { x: WEED_MAP_WIDTH/2, y: WEED_MAP_HEIGHT/2, facing: 1 };
         let workTimer = 0;
-        let workEntities = []; // Weeds and enemies
+        let workEntities = []; 
         let workSessionScore = 0;
+        let workSessionExp = 0;
         let workSpawnTimer = 0;
         let playerInvulnerable = 0;
 
@@ -392,7 +455,6 @@
 
         // --- HOME LOGIC ---
         function updateHome() {
-            // Movement
             let speed = 6;
             let dx = 0, dy = 0;
             if (keys.w) dy = -speed;
@@ -407,7 +469,6 @@
             
             if (dx !== 0) homePlayer.facing = Math.sign(dx);
 
-            // Camera Follow
             camera.x = homePlayer.x - VIEW_WIDTH/2;
             camera.y = homePlayer.y - VIEW_HEIGHT/2;
             camera.x = Math.max(0, Math.min(HOME_WIDTH-VIEW_WIDTH, camera.x));
@@ -418,17 +479,14 @@
             ctx.save();
             ctx.translate(-camera.x, -camera.y);
 
-            // Background Pattern
             ctx.fillStyle = '#a5d6a7';
             ctx.fillRect(camera.x, camera.y, VIEW_WIDTH, VIEW_HEIGHT);
             ctx.fillStyle = 'rgba(255,255,255,0.1)';
             for(let x=0; x<HOME_WIDTH; x+=100) ctx.fillRect(x, 0, 2, HOME_HEIGHT);
             for(let y=0; y<HOME_HEIGHT; y+=100) ctx.fillRect(0, y, HOME_WIDTH, 2);
 
-            // Draw Buildings (sorted by Y)
             buildings.sort((a,b) => a.y - b.y);
             
-            // Draw Objects and Player sorted
             let renderList = [];
             renderList.push({y: homePlayer.y, type:'player'});
             buildings.forEach(b => renderList.push({y: b.y + 20, type:'building', obj: b}));
@@ -440,7 +498,6 @@
                 else drawBuilding(item.obj);
             });
 
-            // Build Ghost
             if (isBuildMenuOpen) {
                 let worldMx = mouse.x + camera.x;
                 let worldMy = mouse.y + camera.y;
@@ -458,97 +515,156 @@
                 return;
             }
 
-            // Spawn Logic
-            workSpawnTimer++;
-            let settings = DIFFICULTY[selectedDiff];
-            if (workSpawnTimer > settings.spawnRate) {
-                spawnWorkEntity(settings.speed);
-                workSpawnTimer = 0;
-            }
+            if (workModeType === 'weed') {
+                // WEED MODE: Player moves, Weeds are static
+                let speed = 6;
+                let dx = 0, dy = 0;
+                if (keys.w) dy = -speed;
+                if (keys.s) dy = speed;
+                if (keys.a) dx = -speed;
+                if (keys.d) dx = speed;
 
-            // Entity Logic (Auto approach center)
-            let centerX = VIEW_WIDTH / 2;
-            let centerY = VIEW_HEIGHT / 2;
+                weedPlayer.x += dx;
+                weedPlayer.y += dy;
+                weedPlayer.x = Math.max(50, Math.min(WEED_MAP_WIDTH-50, weedPlayer.x));
+                weedPlayer.y = Math.max(50, Math.min(WEED_MAP_HEIGHT-50, weedPlayer.y));
+                if (dx !== 0) weedPlayer.facing = Math.sign(dx);
 
-            for (let i = workEntities.length - 1; i >= 0; i--) {
-                let e = workEntities[i];
-                let angle = Math.atan2(centerY - e.y, centerX - e.x);
-                e.x += Math.cos(angle) * e.speed;
-                e.y += Math.sin(angle) * e.speed;
+                // Camera for Weed Mode
+                camera.x = weedPlayer.x - VIEW_WIDTH/2;
+                camera.y = weedPlayer.y - VIEW_HEIGHT/2;
+                camera.x = Math.max(0, Math.min(WEED_MAP_WIDTH-VIEW_WIDTH, camera.x));
+                camera.y = Math.max(0, Math.min(WEED_MAP_HEIGHT-VIEW_HEIGHT, camera.y));
 
-                // Hit Player check
-                let dist = Math.hypot(centerX - e.x, centerY - e.y);
-                if (dist < 40) {
-                    // Hit!
-                    if (e.type === 'enemy') {
-                        playerInvulnerable = 30;
-                        workSessionScore = Math.max(0, workSessionScore - 50); // Penalty
-                        showNotification("痛！扣薪水！");
-                    } else {
-                        // Weed touched you? Mild annoyance?
-                        // Just disappear for now, no penalty, maybe lost opportunity
+                // Spawn more weeds if low
+                if (workEntities.length < 30 && Math.random() < 0.1) {
+                     spawnWorkEntity(0);
+                }
+
+            } else {
+                // RAID MODE: Player fixed, Enemies move
+                workSpawnTimer++;
+                let settings = DIFFICULTY[selectedDiff];
+                let rate = settings.spawnRate * 0.7; 
+
+                if (workSpawnTimer > rate) {
+                    spawnWorkEntity(settings.speed);
+                    workSpawnTimer = 0;
+                }
+
+                let centerX = VIEW_WIDTH / 2;
+                let centerY = VIEW_HEIGHT / 2;
+
+                for (let i = workEntities.length - 1; i >= 0; i--) {
+                    let e = workEntities[i];
+                    let angle = Math.atan2(centerY - e.y, centerX - e.x);
+                    e.x += Math.cos(angle) * e.speed;
+                    e.y += Math.sin(angle) * e.speed;
+
+                    let dist = Math.hypot(centerX - e.x, centerY - e.y);
+                    if (dist < 40) {
+                        if (e.type === 'enemy') {
+                            playerInvulnerable = 30;
+                            let penalty = 50;
+                            if (workSessionScore < penalty) workSessionScore = 0;
+                            else workSessionScore -= penalty;
+                            showNotification("痛！扣薪水！");
+                        }
+                        workEntities.splice(i, 1);
                     }
-                    workEntities.splice(i, 1);
                 }
             }
             
             if (playerInvulnerable > 0) playerInvulnerable--;
             
-            // HUD
             document.getElementById('timer').innerText = Math.ceil(workTimer);
             document.getElementById('score').innerText = score + workSessionScore;
         }
 
         function spawnWorkEntity(baseSpeed) {
-            // Spawn at edge of screen
-            let side = Math.floor(Math.random() * 4);
-            let ex, ey;
-            let margin = 50;
-            
-            if (side === 0) { ex = Math.random() * VIEW_WIDTH; ey = -margin; } // Top
-            else if (side === 1) { ex = VIEW_WIDTH + margin; ey = Math.random() * VIEW_HEIGHT; } // Right
-            else if (side === 2) { ex = Math.random() * VIEW_WIDTH; ey = VIEW_HEIGHT + margin; } // Bottom
-            else { ex = -margin; ey = Math.random() * VIEW_HEIGHT; } // Left
-
-            let isEnemy = Math.random() < 0.3; // 30% enemy
             let key = ZHUYIN_KEYS[Math.floor(Math.random() * ZHUYIN_KEYS.length)];
-
-            workEntities.push({
-                x: ex, y: ey,
-                type: isEnemy ? 'enemy' : 'weed',
-                targetKey: key,
-                zhuyin: ZHUYIN_MAP[key],
-                speed: baseSpeed * (isEnemy ? 1.2 : 0.8) + (Math.random() * 0.5)
-            });
+            
+            if (workModeType === 'weed') {
+                // Random pos in Weed Map
+                let ex = Math.random() * (WEED_MAP_WIDTH - 100) + 50;
+                let ey = Math.random() * (WEED_MAP_HEIGHT - 100) + 50;
+                workEntities.push({
+                    x: ex, y: ey,
+                    type: 'weed',
+                    targetKey: key,
+                    zhuyin: ZHUYIN_MAP[key],
+                    speed: 0 // Static
+                });
+            } else {
+                // Edge pos for Raid
+                let side = Math.floor(Math.random() * 4);
+                let ex, ey;
+                let margin = 50;
+                if (side === 0) { ex = Math.random() * VIEW_WIDTH; ey = -margin; }
+                else if (side === 1) { ex = VIEW_WIDTH + margin; ey = Math.random() * VIEW_HEIGHT; }
+                else if (side === 2) { ex = Math.random() * VIEW_WIDTH; ey = VIEW_HEIGHT + margin; }
+                else { ex = -margin; ey = Math.random() * VIEW_HEIGHT; }
+                
+                workEntities.push({
+                    x: ex, y: ey,
+                    type: 'enemy',
+                    targetKey: key,
+                    zhuyin: ZHUYIN_MAP[key],
+                    speed: baseSpeed * 1.5 + (Math.random() * 0.5)
+                });
+            }
         }
 
         function renderWork() {
-            // Darker background for dangerous work mode
-            ctx.fillStyle = '#5d4037'; // Dirt ground color
-            ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
-            
-            // Draw Player in center
-            let cx = VIEW_WIDTH / 2;
-            let cy = VIEW_HEIGHT / 2;
-            
-            // Draw "Safe Zone" circle
-            ctx.beginPath();
-            ctx.arc(cx, cy, 100, 0, Math.PI*2);
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = 5;
-            ctx.stroke();
+            if (workModeType === 'weed') {
+                // WEED RENDER (Map style)
+                ctx.save();
+                ctx.translate(-camera.x, -camera.y);
 
-            // Draw Entities
-            workEntities.forEach(e => {
-                if (e.type === 'enemy') drawEnemy(e.x, e.y, e.zhuyin);
-                else drawWeed(e.x, e.y, e.zhuyin);
-            });
+                // BG
+                ctx.fillStyle = '#c5e1a5';
+                ctx.fillRect(camera.x, camera.y, VIEW_WIDTH, VIEW_HEIGHT);
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                for(let x=0; x<WEED_MAP_WIDTH; x+=100) ctx.fillRect(x, 0, 2, WEED_MAP_HEIGHT);
+                for(let y=0; y<WEED_MAP_HEIGHT; y+=100) ctx.fillRect(0, y, WEED_MAP_WIDTH, 2);
 
-            // Draw Player
-            if (playerInvulnerable > 0 && Math.floor(Date.now()/50)%2===0) {
-                // blink
+                // Sort
+                let renderList = [];
+                renderList.push({y: weedPlayer.y, type:'player'});
+                workEntities.forEach(e => renderList.push({y: e.y, type:'weed', obj: e}));
+                renderList.sort((a,b)=>a.y-b.y);
+
+                renderList.forEach(item => {
+                    if(item.type==='player') drawPlayer(weedPlayer.x, weedPlayer.y, weedPlayer.facing);
+                    else drawWeed(item.obj.x, item.obj.y, item.obj.zhuyin);
+                });
+
+                ctx.restore();
+
             } else {
-                drawPlayer(cx, cy, 1);
+                // RAID RENDER (Tower Defense style)
+                ctx.fillStyle = '#3e2723'; 
+                ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+                
+                let cx = VIEW_WIDTH / 2;
+                let cy = VIEW_HEIGHT / 2;
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, 100, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                workEntities.forEach(e => {
+                    if (e.type === 'enemy') drawEnemy(e.x, e.y, e.zhuyin);
+                    else drawWeed(e.x, e.y, e.zhuyin);
+                });
+
+                if (playerInvulnerable > 0 && Math.floor(Date.now()/50)%2===0) {
+                    // blink
+                } else {
+                    drawPlayer(cx, cy, 1);
+                }
             }
         }
 
@@ -558,23 +674,20 @@
             ctx.translate(x, y);
             if (facing < 0) ctx.scale(-1, 1);
 
-            // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath(); ctx.ellipse(0, 25, 20, 8, 0, 0, Math.PI*2); ctx.fill();
 
-            // Body
             let color = CHAR_STATS[selectedChar].color;
             ctx.fillStyle = color;
             ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI*2); ctx.fill();
 
-            // Ears
             if (selectedChar === 'usagi') {
                 ctx.fillStyle = color;
                 ctx.beginPath(); ctx.ellipse(-15, -20, 8, 20, -0.2, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.ellipse(15, -20, 8, 20, 0.2, 0, Math.PI*2); ctx.fill();
             } else if (selectedChar === 'hachiware') {
                 ctx.fillStyle = '#42a5f5';
-                ctx.beginPath(); ctx.arc(0, -10, 25, Math.PI, 0); ctx.fill(); // hair
+                ctx.beginPath(); ctx.arc(0, -10, 25, Math.PI, 0); ctx.fill(); 
                 ctx.fillStyle = color;
                 ctx.beginPath(); ctx.moveTo(-25,-10); ctx.quadraticCurveTo(0, 10, 25, -10); ctx.fill();
             } else {
@@ -582,12 +695,10 @@
                 ctx.beginPath(); ctx.arc(20, -15, 8, 0, Math.PI*2); ctx.fill();
             }
 
-            // Face
             ctx.fillStyle = '#3e2723';
             ctx.beginPath(); ctx.arc(-8, 0, 3, 0, Math.PI*2); ctx.fill(); 
             ctx.beginPath(); ctx.arc(8, 0, 3, 0, Math.PI*2); ctx.fill(); 
             
-            // Blush
             ctx.fillStyle = '#ffcdd2';
             ctx.globalAlpha = 0.6;
             ctx.beginPath(); ctx.arc(-15, 5, 5, 0, Math.PI*2); ctx.fill();
@@ -599,7 +710,6 @@
         function drawWeed(x, y, char) {
             ctx.save();
             ctx.translate(x, y);
-            // Floating motion
             let bob = Math.sin(Date.now() * 0.01) * 5;
             ctx.translate(0, bob);
             
@@ -619,7 +729,6 @@
 
             ctx.fillStyle = '#5c6bc0';
             ctx.beginPath(); ctx.arc(0, -15, 20, 0, Math.PI*2); ctx.fill();
-            // Wings
             ctx.fillStyle = 'rgba(255,255,255,0.7)';
             ctx.beginPath(); ctx.ellipse(-20, -25, 12, 6, -0.5, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.ellipse(20, -25, 12, 6, 0.5, 0, Math.PI*2); ctx.fill();
@@ -657,27 +766,116 @@
             } else if (b.type === 3) { // Wall
                 ctx.fillStyle = '#bdbdbd'; ctx.fillRect(-20, -20, 40, 30);
                 ctx.strokeStyle = '#757575'; ctx.strokeRect(-20,-20,40,30);
+            } else if (b.type === 4) { // Ramen
+                ctx.fillStyle = '#ffecb3'; ctx.fillRect(-40, -40, 80, 40);
+                ctx.fillStyle = '#d84315'; ctx.font = "30px serif"; ctx.fillText("郎", -15, -10);
+                ctx.strokeStyle = '#5d4037'; ctx.strokeRect(-40, -40, 80, 40);
+            } else if (b.type === 5) { // Onsen
+                ctx.fillStyle = '#80deea'; ctx.beginPath(); ctx.ellipse(0, 0, 50, 30, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 4; ctx.stroke();
+                ctx.font = "24px serif"; ctx.fillStyle = "#e0f7fa"; ctx.fillText("♨️", -12, 10);
+            } else if (b.type === 6) { // Statue
+                ctx.fillStyle = '#9e9e9e'; ctx.fillRect(-20, -60, 40, 60);
+                ctx.beginPath(); ctx.arc(0, -60, 25, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-15, -75, 8, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(15, -75, 8, 0, Math.PI*2); ctx.fill();
             }
             ctx.restore();
         }
 
         function drawBuildGhost(x, y) {
             let item = BUILD_ITEMS[selectedBuildIdx];
+            if (!item) return;
+
             ctx.save();
             ctx.translate(x, y);
             ctx.globalAlpha = 0.6;
-            ctx.fillStyle = (score >= item.cost) ? '#81c784' : '#e57373';
+            
+            let locked = playerLevel < item.unlockLv;
+            let canAfford = score >= item.cost;
+            
+            if (locked) {
+                ctx.fillStyle = '#9e9e9e'; 
+            } else {
+                ctx.fillStyle = canAfford ? '#81c784' : '#e57373';
+            }
+            
             ctx.beginPath(); ctx.arc(0,0, 40, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = 'black'; ctx.font = "30px sans-serif"; 
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(item.icon, 0, 0);
+            
+            if(locked) {
+                ctx.font = "16px sans-serif";
+                ctx.fillStyle = "white";
+                ctx.fillText(`Lv.${item.unlockLv}`, 0, -50);
+            }
+
             ctx.restore();
         }
 
+        // --- Save / Load Logic ---
+        function saveGameData() {
+            const data = {
+                score,
+                playerLevel,
+                playerExp,
+                buildings,
+                selectedChar,
+                selectedDiff,
+                expToNextLevel
+            };
+            localStorage.setItem('chiikawa_save', JSON.stringify(data));
+            console.log("Game Saved", data);
+            showNotification("進度已儲存！");
+        }
+
+        function loadGameData() {
+            const json = localStorage.getItem('chiikawa_save');
+            if (json) {
+                const data = JSON.parse(json);
+                score = data.score !== undefined ? data.score : 500;
+                playerLevel = data.playerLevel !== undefined ? data.playerLevel : 1;
+                playerExp = data.playerExp !== undefined ? data.playerExp : 0;
+                expToNextLevel = data.expToNextLevel !== undefined ? data.expToNextLevel : 100;
+                buildings = data.buildings || [];
+                selectedChar = data.selectedChar || 'chiikawa';
+                selectedDiff = data.selectedDiff || 'normal';
+                
+                // UI Updates
+                updateExpBar();
+                selectChar(selectedChar);
+                setDifficulty(selectedDiff);
+                return true;
+            }
+            return false;
+        }
+        
+        function hasSaveData() {
+            return localStorage.getItem('chiikawa_save') !== null;
+        }
+
         // --- Game Controls ---
-        function initGame() {
+        function initGame(isContinue) {
+            if (isContinue) {
+                if (!loadGameData()) {
+                    showNotification("找不到存檔，開始新遊戲");
+                    // Continue failed, default values are already set
+                }
+            } else {
+                // New Game
+                score = 500;
+                playerLevel = 1;
+                playerExp = 0;
+                expToNextLevel = 100;
+                buildings = [];
+                // Char/Diff keep selection from UI
+                saveGameData(); // Overwrite old save
+            }
+            
             document.getElementById('start-screen').style.display = 'none';
             switchToHomeMode();
+            updateExpBar();
         }
 
         function switchToHomeMode() {
@@ -686,29 +884,55 @@
             document.getElementById('work-controls').style.display = 'none';
             document.getElementById('home-indicator').style.display = 'block';
             document.getElementById('work-indicator').style.display = 'none';
+            document.getElementById('raid-indicator').style.display = 'none';
             document.getElementById('timer-display').style.display = 'none';
             document.getElementById('result-screen').style.display = 'none';
             
-            // Apply work earnings if coming back
-            if (workSessionScore > 0) {
+            if (workSessionScore > 0 || workSessionExp > 0) {
                 score += workSessionScore;
+                gainExp(workSessionExp);
                 workSessionScore = 0;
+                workSessionExp = 0;
+                saveGameData(); // Auto save after work
             }
             document.getElementById('score').innerText = score;
         }
 
-        function switchToWorkMode() {
+        function switchToWorkMode(type) {
             currentMode = 'WORK';
+            workModeType = type;
+            
             document.getElementById('home-controls').style.display = 'none';
             document.getElementById('work-controls').style.display = 'block';
             document.getElementById('home-indicator').style.display = 'none';
-            document.getElementById('work-indicator').style.display = 'block';
             document.getElementById('timer-display').style.display = 'flex';
             
-            // Reset Work State
+            if (type === 'weed') {
+                document.getElementById('work-indicator').style.display = 'block';
+                document.getElementById('raid-indicator').style.display = 'none';
+                document.getElementById('weed-hint').style.display = 'flex';
+                document.getElementById('raid-hint').style.display = 'none';
+                
+                // Init Weed Player position
+                weedPlayer.x = WEED_MAP_WIDTH/2;
+                weedPlayer.y = WEED_MAP_HEIGHT/2;
+                
+                // Initial Spawns
+                workEntities = [];
+                for(let i=0; i<30; i++) spawnWorkEntity(0);
+                
+            } else {
+                document.getElementById('work-indicator').style.display = 'none';
+                document.getElementById('raid-indicator').style.display = 'block';
+                document.getElementById('weed-hint').style.display = 'none';
+                document.getElementById('raid-hint').style.display = 'flex';
+                
+                workEntities = [];
+            }
+            
             workTimer = 60;
-            workEntities = [];
             workSessionScore = 0;
+            workSessionExp = 0;
             isBuildMenuOpen = false;
             document.getElementById('build-palette').style.display = 'none';
         }
@@ -717,6 +941,7 @@
             document.getElementById('result-screen').style.display = 'flex';
             document.getElementById('result-title').innerText = finished ? "工作完成！" : "提早回家";
             document.getElementById('result-income').innerText = workSessionScore;
+            document.getElementById('result-exp').innerText = workSessionExp;
         }
         
         function returnHome() {
@@ -725,6 +950,23 @@
             } else {
                 switchToHomeMode();
             }
+        }
+
+        function gainExp(amount) {
+            playerExp += amount;
+            while(playerExp >= expToNextLevel) {
+                playerExp -= expToNextLevel;
+                playerLevel++;
+                expToNextLevel = Math.floor(expToNextLevel * 1.5);
+                showNotification(`升級了！Lv.${playerLevel}`);
+            }
+            updateExpBar();
+        }
+
+        function updateExpBar() {
+            document.getElementById('level-display').innerText = playerLevel;
+            let percent = (playerExp / expToNextLevel) * 100;
+            document.getElementById('exp-bar').style.width = percent + '%';
         }
 
         function showNotification(msg) {
@@ -738,12 +980,40 @@
         function toggleBuildMenu() {
             isBuildMenuOpen = !isBuildMenuOpen;
             const menu = document.getElementById('build-palette');
-            menu.style.display = isBuildMenuOpen ? 'flex' : 'none';
+            
+            if (isBuildMenuOpen) {
+                menu.innerHTML = ''; // Clear
+                BUILD_ITEMS.forEach((item, idx) => {
+                    let div = document.createElement('div');
+                    div.className = 'build-item';
+                    if (idx === selectedBuildIdx) div.classList.add('selected');
+                    
+                    let locked = playerLevel < item.unlockLv;
+                    if (locked) div.classList.add('locked');
+
+                    div.innerHTML = `
+                        <span style="font-size:24px">${item.icon}</span>
+                        <div>${item.name}<br><span style="font-size:12px;color:#666">${item.cost}円</span></div>
+                    `;
+
+                    if (locked) {
+                        div.innerHTML += `<div class="lock-overlay">Lv.${item.unlockLv} 解鎖</div>`;
+                    } else {
+                        div.onclick = () => selectBuildItem(idx);
+                    }
+
+                    menu.appendChild(div);
+                });
+                menu.style.display = 'flex';
+            } else {
+                menu.style.display = 'none';
+            }
         }
         
         function selectBuildItem(idx) {
             selectedBuildIdx = idx;
-            document.querySelectorAll('.build-item').forEach((el, i) => {
+            let items = document.querySelectorAll('.build-item');
+            items.forEach((el, i) => {
                 if(i===idx) el.classList.add('selected');
                 else el.classList.remove('selected');
             });
@@ -763,22 +1033,33 @@
 
         // --- Event Listeners ---
         window.addEventListener('keydown', e => {
-            if (currentMode === 'HOME') {
-                // FIXED: Use e.code to ignore IME (Zhuyin) interference
+            if (currentMode === 'HOME' || (currentMode === 'WORK' && workModeType === 'weed')) {
                 if(e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
                 if(e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
                 if(e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
                 if(e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
-            } else if (currentMode === 'WORK') {
-                // Typing check
-                let nearestDist = 9999;
+            } 
+            
+            if (currentMode === 'WORK') {
                 let hitIdx = -1;
+                let nearestDist = 9999;
 
-                // Find nearest matching entity
+                // Typing Logic
                 for (let i = 0; i < workEntities.length; i++) {
                     let ent = workEntities[i];
+                    
+                    // Match Key?
                     if (ent.targetKey === e.key || ent.zhuyin === e.key) {
-                        let dist = Math.hypot(VIEW_WIDTH/2 - ent.x, VIEW_HEIGHT/2 - ent.y);
+                        
+                        // Check Range
+                        let dist = 9999;
+                        if (workModeType === 'weed') {
+                            dist = Math.hypot(weedPlayer.x - ent.x, weedPlayer.y - ent.y);
+                            if (dist > 120) continue; // Out of range for weed mode
+                        } else {
+                            dist = Math.hypot(VIEW_WIDTH/2 - ent.x, VIEW_HEIGHT/2 - ent.y);
+                        }
+
                         if (dist < nearestDist) {
                             nearestDist = dist;
                             hitIdx = i;
@@ -790,8 +1071,11 @@
                     let ent = workEntities[hitIdx];
                     workEntities.splice(hitIdx, 1);
                     
-                    let reward = (ent.type === 'enemy' ? 50 : 10) * CHAR_STATS[selectedChar].luck;
-                    workSessionScore += Math.floor(reward);
+                    let baseReward = (ent.type === 'enemy' ? 50 : 10);
+                    let expReward = (ent.type === 'enemy' ? 20 : 5);
+                    
+                    workSessionScore += Math.floor(baseReward * CHAR_STATS[selectedChar].luck);
+                    workSessionExp += expReward;
                 }
             }
         });
@@ -812,6 +1096,13 @@
         canvas.addEventListener('mousedown', () => {
             if (currentMode === 'HOME' && isBuildMenuOpen) {
                 let item = BUILD_ITEMS[selectedBuildIdx];
+                if (!item) return;
+
+                if (playerLevel < item.unlockLv) {
+                    showNotification("等級不足！");
+                    return;
+                }
+
                 if (score >= item.cost) {
                     score -= item.cost;
                     document.getElementById('score').innerText = score;
@@ -822,6 +1113,7 @@
                         w: item.w
                     });
                     showNotification(`建造了 ${item.name}!`);
+                    saveGameData(); // Auto save after build
                 } else {
                     showNotification("錢不夠喔！");
                 }
@@ -836,8 +1128,14 @@
         }
         window.addEventListener('resize', resize);
         
-        resize();
-        loop();
+        // Initial Check for save
+        window.onload = function() {
+            if (hasSaveData()) {
+                document.getElementById('btn-continue').style.display = 'block';
+            }
+            resize();
+            loop();
+        };
 
     </script>
 </body>
