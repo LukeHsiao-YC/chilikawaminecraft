@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吉伊卡哇方塊口袋世界</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: "Noto Sans TC", sans-serif;
+            background-color: #87CEEB; /* 天空藍 */
+            user-select: none;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            line-height: 20px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #stats-bar {
+            padding: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid white;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        #block-selector {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .block-option {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .block-option.active {
+            border-color: yellow;
+            transform: scale(1.1);
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #c92a2a;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        h1 {
+            color: #ffd43b;
+            text-shadow: 3px 3px 0 #e67700;
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <div id="stats-bar">
+            <div class="stat-item">💰 <span id="money-display">0</span> 円</div>
+            <div class="stat-item">🌱 除草數: <span id="weed-display">0</span></div>
+        </div>
+        <div id="crosshair">+</div>
+        <div id="instructions">
+            [WASD] 移動 | [滑鼠] 轉視角 | [左鍵] 除草/破壞 | [右鍵] 放置方塊<br>
+            [1-4] 切換方塊 | [ESC] 暫停
+        </div>
+        <div id="block-selector">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <!-- Start/Pause Screen -->
+    <div id="overlay">
+        <h1>吉伊卡哇方塊世界</h1>
+        <p>歡迎來到麥塊風格的口袋世界！</p>
+        <p>幫忙除草賺錢，然後蓋出可愛的家吧！</p>
+        <br>
+        <button id="start-btn">點擊開始遊玩</button>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- PointerLockControls (Bundled logic for single file) -->
+    <script>
+        // PointerLockControls implementation tailored for this file to ensure standalone execution
+        class PointerLockControls extends THREE.EventDispatcher {
+            constructor(camera, domElement) {
+                super();
+                this.domElement = domElement || document.body;
+                this.isLocked = false;
+                this.minPolarAngle = 0;
+                this.maxPolarAngle = Math.PI;
+
+                const scope = this;
+                const changeEvent = { type: 'change' };
+                const lockEvent = { type: 'lock' };
+                const unlockEvent = { type: 'unlock' };
+
+                const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+                const PI_2 = Math.PI / 2;
+                const vec = new THREE.Vector3();
+
+                function onMouseMove(event) {
+                    if (scope.isLocked === false) return;
+                    const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                    const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+                    euler.setFromQuaternion(camera.quaternion);
+                    euler.y -= movementX * 0.002;
+                    euler.x -= movementY * 0.002;
+                    euler.x = Math.max(PI_2 - scope.maxPolarAngle, Math.min(PI_2 - scope.minPolarAngle, euler.x));
+                    camera.quaternion.setFromEuler(euler);
+                    scope.dispatchEvent(changeEvent);
+                }
+
+                function onPointerlockChange() {
+                    if (document.pointerLockElement === scope.domElement) {
+                        scope.dispatchEvent(lockEvent);
+                        scope.isLocked = true;
+                    } else {
+                        scope.dispatchEvent(unlockEvent);
+                        scope.isLocked = false;
+                    }
+                }
+
+                function onPointerlockError() {
+                    console.error('PointerLockControls: Unable to use Pointer Lock API');
+                }
+
+                this.connect = function () {
+                    document.addEventListener('mousemove', onMouseMove, false);
+                    document.addEventListener('pointerlockchange', onPointerlockChange, false);
+                    document.addEventListener('pointerlockerror', onPointerlockError, false);
+                };
+
+                this.disconnect = function () {
+                    document.removeEventListener('mousemove', onMouseMove, false);
+                    document.removeEventListener('pointerlockchange', onPointerlockChange, false);
+                    document.removeEventListener('pointerlockerror', onPointerlockError, false);
+                };
+
+                this
