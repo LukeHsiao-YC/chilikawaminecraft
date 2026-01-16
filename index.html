@@ -47,6 +47,7 @@
             text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
             display: flex;
             gap: 20px;
+            align-items: center;
         }
 
         .stat-item {
@@ -54,6 +55,21 @@
             padding: 10px 20px;
             border-radius: 10px;
             border: 2px solid white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #char-avatar {
+            font-size: 32px;
+            background: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 3px solid #ffd43b;
         }
 
         #instructions {
@@ -75,27 +91,38 @@
             right: 20px;
             display: flex;
             gap: 10px;
+            pointer-events: auto; 
         }
 
         .block-option {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border: 3px solid rgba(255,255,255,0.5);
             cursor: pointer;
             transition: transform 0.1s;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            background-color: rgba(0,0,0,0.2);
+            color: white;
+            text-shadow: 1px 1px 0 #000;
         }
         .block-option.active {
             border-color: yellow;
             transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
+        /* Start Screen & Character Select */
         #overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -103,23 +130,7 @@
             color: white;
             pointer-events: auto;
             z-index: 10;
-        }
-
-        button {
-            padding: 15px 30px;
-            font-size: 20px;
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #c92a2a;
-            transition: transform 0.1s;
-        }
-
-        button:active {
-            transform: translateY(4px);
-            box-shadow: none;
+            transition: opacity 0.5s;
         }
 
         h1 {
@@ -127,6 +138,78 @@
             text-shadow: 3px 3px 0 #e67700;
             font-size: 48px;
             margin-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .char-select-container {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .char-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            width: 180px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .char-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .char-card.selected {
+            border-color: #ffd43b;
+            background: rgba(255, 212, 59, 0.2);
+            box-shadow: 0 0 20px rgba(255, 212, 59, 0.5);
+        }
+
+        .char-emoji {
+            font-size: 60px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .char-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .char-desc {
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        #start-btn {
+            padding: 15px 50px;
+            font-size: 24px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #c92a2a;
+            transition: transform 0.1s;
+            margin-top: 20px;
+        }
+
+        #start-btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+
+        #start-btn:disabled {
+            background: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
         }
     </style>
 </head>
@@ -135,33 +218,111 @@
     <!-- UI Overlay -->
     <div id="ui-layer">
         <div id="stats-bar">
+            <div id="char-avatar">?</div>
             <div class="stat-item">💰 <span id="money-display">0</span> 円</div>
             <div class="stat-item">🌱 除草數: <span id="weed-display">0</span></div>
         </div>
         <div id="crosshair">+</div>
         <div id="instructions">
-            [WASD] 移動 | [滑鼠] 轉視角 | [左鍵] 除草/破壞 | [右鍵] 放置方塊<br>
-            [1-4] 切換方塊 | [ESC] 暫停
+            [WASD] 移動 | [SPACE] 跳躍 | [滑鼠] 轉視角<br>
+            [左鍵] 除草/破壞 | [右鍵] 放置方塊 | [1-5] 切換道具 | [ESC] 暫停
         </div>
         <div id="block-selector">
             <!-- Populated by JS -->
         </div>
     </div>
 
-    <!-- Start/Pause Screen -->
+    <!-- Character Selection Screen -->
     <div id="overlay">
-        <h1>吉伊卡哇方塊世界</h1>
-        <p>歡迎來到麥塊風格的口袋世界！</p>
-        <p>幫忙除草賺錢，然後蓋出可愛的家吧！</p>
-        <br>
-        <button id="start-btn">點擊開始遊玩</button>
+        <h1>吉伊卡哇方塊冒險</h1>
+        <p>選擇你的角色開始探險！</p>
+        
+        <div class="char-select-container">
+            <div class="char-card" onclick="selectCharacter('chiikawa')" id="card-chiikawa">
+                <span class="char-emoji">🐹</span>
+                <span class="char-name">吉伊卡哇</span>
+                <span class="char-desc">能力：均衡<br>雖然愛哭，但總是能找到稀有物品？</span>
+            </div>
+            <div class="char-card" onclick="selectCharacter('hachiware')" id="card-hachiware">
+                <span class="char-emoji">🐱</span>
+                <span class="char-name">小八</span>
+                <span class="char-desc">能力：勤奮<br>除草賺錢的速度比較快！</span>
+            </div>
+            <div class="char-card" onclick="selectCharacter('usagi')" id="card-usagi">
+                <span class="char-emoji">🐰</span>
+                <span class="char-name">烏薩奇</span>
+                <span class="char-desc">能力：怪奇<br>移動速度超級快！Yahoo！</span>
+            </div>
+        </div>
+
+        <button id="start-btn" onclick="startGame()" disabled>請先選擇角色</button>
     </div>
 
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- PointerLockControls (Bundled logic for single file) -->
+    
     <script>
-        // PointerLockControls implementation tailored for this file to ensure standalone execution
+        // --- Game State & Configuration ---
+        let camera, scene, renderer, controls;
+        let objects = [];
+        let raycaster;
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let canJump = false;
+        let isGameActive = false;
+
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        // Game Stats
+        let money = 0;
+        let weedsRemoved = 0;
+        let selectedBlockType = 'dirt';
+        
+        // Character Config
+        let currentCharacter = null;
+        const CHARACTERS = {
+            chiikawa: {
+                name: '吉伊卡哇',
+                emoji: '🐹',
+                speedMultiplier: 1.0,
+                moneyMultiplier: 1.0,
+                handColor: 0xffffff, // White
+                handTipColor: 0xffb7c5 // Pink
+            },
+            hachiware: {
+                name: '小八',
+                emoji: '🐱',
+                speedMultiplier: 1.1,
+                moneyMultiplier: 2.0, // Earns double
+                handColor: 0xffffff,
+                handTipColor: 0x4da6ff // Blue
+            },
+            usagi: {
+                name: '烏薩奇',
+                emoji: '🐰',
+                speedMultiplier: 1.8, // Super fast
+                moneyMultiplier: 1.0,
+                handColor: 0xffeb3b, // Yellow
+                handTipColor: 0xff9800 // Orange
+            }
+        };
+
+        // Block Types
+        const BLOCKS = {
+            grass: { color: 0x567d46, name: '草地' },
+            dirt: { color: 0x8b5a2b, name: '泥土' },
+            stone: { color: 0x808080, name: '石頭' },
+            wood: { color: 0x5c4033, name: '木頭' },
+            leaves: { color: 0x228b22, name: '樹葉' },
+            weed: { color: 0x32cd32, name: '雜草', isPlant: true } // Special type
+        };
+
+        // --- PointerLockControls Implementation ---
+        // (Simplified version embedded for single-file portability)
         class PointerLockControls extends THREE.EventDispatcher {
             constructor(camera, domElement) {
                 super();
@@ -199,6 +360,7 @@
                     } else {
                         scope.dispatchEvent(unlockEvent);
                         scope.isLocked = false;
+                        if(isGameActive) pauseGame();
                     }
                 }
 
@@ -218,4 +380,459 @@
                     document.removeEventListener('pointerlockerror', onPointerlockError, false);
                 };
 
-                this
+                this.lock = function () {
+                    this.domElement.requestPointerLock();
+                };
+
+                this.unlock = function () {
+                    document.exitPointerLock();
+                };
+
+                this.getObject = function () {
+                    return camera;
+                };
+
+                this.getDirection = function (v) {
+                    return v.set(0, 0, -1).applyQuaternion(camera.quaternion);
+                };
+
+                this.connect();
+            }
+        }
+
+        // --- Initialization ---
+
+        function init() {
+            // Setup Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 0, 750);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xeeeeee, 0.7); // Soft white light
+            scene.add(ambientLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(50, 200, 100);
+            scene.add(dirLight);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+
+            // Controls
+            controls = new PointerLockControls(camera, document.body);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Raycaster for interactions
+            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+
+            // Generate World
+            generateWorld();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown);
+            
+            // Build UI
+            setupBlockSelector();
+        }
+
+        // --- Character Selection Logic ---
+        function selectCharacter(charId) {
+            currentCharacter = CHARACTERS[charId];
+            
+            // UI Visuals
+            document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`card-${charId}`).classList.add('selected');
+            
+            // Enable start button
+            const btn = document.getElementById('start-btn');
+            btn.disabled = false;
+            btn.textContent = `以 ${currentCharacter.name} 開始遊玩`;
+        }
+
+        function startGame() {
+            if (!currentCharacter) return;
+
+            // Hide overlay
+            document.getElementById('overlay').style.display = 'none';
+            
+            // Update HUD
+            document.getElementById('char-avatar').innerText = currentCharacter.emoji;
+            
+            // Create "Hand" model based on character
+            createPlayerHand();
+
+            // Start game loop
+            isGameActive = true;
+            controls.lock();
+            animate();
+        }
+
+        function pauseGame() {
+            document.getElementById('overlay').style.display = 'flex';
+            document.querySelector('#overlay h1').innerText = "暫停中";
+            document.querySelector('#overlay p').innerText = "點擊畫面回到遊戲";
+            document.querySelector('.char-select-container').style.display = 'none'; // Hide selection
+            const btn = document.getElementById('start-btn');
+            btn.innerText = "繼續遊玩";
+            btn.onclick = function() {
+                document.getElementById('overlay').style.display = 'none';
+                controls.lock();
+            };
+        }
+
+        function createPlayerHand() {
+            // Remove existing hand if any
+            const existingHand = camera.getObjectByName("playerHand");
+            if (existingHand) camera.remove(existingHand);
+
+            const handGroup = new THREE.Group();
+            handGroup.name = "playerHand";
+
+            // Arm/Hand geometry
+            const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+            const material = new THREE.MeshLambertMaterial({ color: currentCharacter.handColor });
+            const handMesh = new THREE.Mesh(geometry, material);
+            handMesh.position.set(0.4, -0.3, -0.5);
+            
+            // Tip (to show paws or detail)
+            const tipGeo = new THREE.BoxGeometry(0.32, 0.32, 0.2);
+            const tipMat = new THREE.MeshLambertMaterial({ color: currentCharacter.handTipColor });
+            const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+            tipMesh.position.set(0, 0, -0.4); // At the end of the arm
+            
+            handMesh.add(tipMesh);
+            handGroup.add(handMesh);
+            
+            camera.add(handGroup);
+            scene.add(camera);
+        }
+
+        // --- World Generation ---
+        function generateWorld() {
+            const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+            floorGeometry.rotateX(-Math.PI / 2);
+
+            // Basic ground generation using boxes for voxels near center, simpler plane for far
+            // For this demo, we'll create a platform of voxels to interact with.
+            
+            const boxGeo = new THREE.BoxGeometry(5, 5, 5);
+            
+            // Materials
+            const materials = {};
+            for (const [key, config] of Object.entries(BLOCKS)) {
+                materials[key] = new THREE.MeshLambertMaterial({ color: config.color });
+            }
+
+            // Create a base platform (20x20)
+            const size = 30; 
+            for (let x = -size; x < size; x++) {
+                for (let z = -size; z < size; z++) {
+                    // Simplex noise-ish terrain
+                    let yHeight = Math.floor(Math.sin(x/5) * Math.cos(z/5) * 3);
+                    
+                    // Create Grass/Dirt column
+                    createVoxel(x * 5, yHeight * 5, z * 5, materials.grass, 'grass');
+                    
+                    // Add Dirt below
+                    createVoxel(x * 5, (yHeight - 1) * 5, z * 5, materials.dirt, 'dirt');
+                    
+                    // Random Chance for Weeds (Reward source)
+                    if (Math.random() > 0.85 && yHeight >= 0) {
+                         createPlant(x * 5, (yHeight + 1) * 5, z * 5, materials.weed, 'weed');
+                    }
+                    
+                    // Random Tree
+                    if (Math.random() > 0.98 && x > -size + 2 && x < size - 2 && z > -size + 2 && z < size - 2) {
+                        createTree(x * 5, (yHeight + 1) * 5, z * 5, materials);
+                    }
+                }
+            }
+        }
+
+        function createVoxel(x, y, z, material, type) {
+            const geometry = new THREE.BoxGeometry(5, 5, 5);
+            const voxel = new THREE.Mesh(geometry, material);
+            voxel.position.set(x, y, z);
+            voxel.userData = { isVoxel: true, type: type };
+            scene.add(voxel);
+            objects.push(voxel);
+        }
+
+        function createPlant(x, y, z, material, type) {
+            // Plants are smaller/cross shapes usually, but we'll use small boxes for simplicity
+            const geometry = new THREE.BoxGeometry(2, 4, 2);
+            const plant = new THREE.Mesh(geometry, material);
+            plant.position.set(x, y - 0.5, z); // Sit on top of block
+            plant.userData = { isVoxel: true, type: type, isPlant: true };
+            scene.add(plant);
+            objects.push(plant);
+        }
+
+        function createTree(x, y, z, mats) {
+            // Trunk
+            for(let i=0; i<4; i++) {
+                createVoxel(x, y + (i*5), z, mats.wood, 'wood');
+            }
+            // Leaves
+            const leafY = y + 15;
+            for(let lx=-1; lx<=1; lx++) {
+                for(let lz=-1; lz<=1; lz++) {
+                    createVoxel(x + (lx*5), leafY, z + (lz*5), mats.leaves, 'leaves');
+                    createVoxel(x + (lx*5), leafY + 5, z + (lz*5), mats.leaves, 'leaves');
+                }
+            }
+            createVoxel(x, leafY + 10, z, mats.leaves, 'leaves');
+        }
+
+        // --- Interaction Logic ---
+
+        function onMouseDown(event) {
+            if (!controls.isLocked) {
+                controls.lock();
+                return;
+            }
+
+            // Raycast from center of screen
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersections = raycaster.intersectObjects(objects);
+
+            if (intersections.length > 0) {
+                const intersect = intersections[0];
+
+                // Left Click (0): Remove Block / Weed
+                if (event.button === 0) {
+                    // Visual feedback
+                    createParticles(intersect.point, intersect.object.material.color);
+                    
+                    if (intersect.object.userData.isPlant) {
+                        // It's a weed!
+                        scene.remove(intersect.object);
+                        objects.splice(objects.indexOf(intersect.object), 1);
+                        
+                        // Rewards
+                        weedsRemoved++;
+                        let reward = 10;
+                        if (currentCharacter) {
+                            reward = Math.floor(reward * currentCharacter.moneyMultiplier);
+                        }
+                        money += reward;
+                        updateStats();
+                        
+                        // Maybe play a sound? (Silent for this demo)
+                    } else {
+                        // Standard block breaking
+                        scene.remove(intersect.object);
+                        objects.splice(objects.indexOf(intersect.object), 1);
+                    }
+                }
+                
+                // Right Click (2): Place Block
+                if (event.button === 2) {
+                    const voxelPos = intersect.point.add(intersect.face.normal).divideScalar(5).floor().multiplyScalar(5).addScalar(0);
+                    // Adjust because we floor to grid
+                    // Actually simple trick:
+                    const p = intersect.point.clone().add(intersect.face.normal.clone().multiplyScalar(2.5));
+                    p.divideScalar(5).floor().multiplyScalar(5);
+                    
+                    // Don't place inside player
+                    const playerPos = camera.position.clone();
+                    if (p.distanceTo(playerPos) < 6) return; // Too close
+
+                    const matName = selectedBlockType;
+                    const mat = new THREE.MeshLambertMaterial({ color: BLOCKS[matName].color });
+                    
+                    if (BLOCKS[matName].isPlant) {
+                        createPlant(p.x, p.y + 2.5, p.z, mat, matName);
+                    } else {
+                        createVoxel(p.x, p.y, p.z, mat, matName);
+                    }
+                }
+            }
+        }
+
+        function createParticles(pos, color) {
+            // Simple particle explosion effect
+            const particleCount = 5;
+            const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            
+            for(let i=0; i<particleCount; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.copy(pos);
+                mesh.position.x += (Math.random() - 0.5) * 3;
+                mesh.position.y += (Math.random() - 0.5) * 3;
+                mesh.position.z += (Math.random() - 0.5) * 3;
+                scene.add(mesh);
+                
+                // Animate removal
+                const speed = {
+                    x: (Math.random() - 0.5),
+                    y: Math.random() * 0.5,
+                    z: (Math.random() - 0.5)
+                };
+                
+                function animateParticle() {
+                    mesh.position.x += speed.x;
+                    mesh.position.y += speed.y;
+                    mesh.position.z += speed.z;
+                    mesh.rotation.x += 0.1;
+                    mesh.scale.multiplyScalar(0.9);
+                    
+                    if(mesh.scale.x > 0.1) {
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        scene.remove(mesh);
+                    }
+                }
+                animateParticle();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('money-display').innerText = money;
+            document.getElementById('weed-display').innerText = weedsRemoved;
+        }
+
+        function setupBlockSelector() {
+            const container = document.getElementById('block-selector');
+            const keys = Object.keys(BLOCKS).filter(k => k !== 'weed'); // Don't allow placing weeds manually easily
+            
+            keys.forEach((key, index) => {
+                const div = document.createElement('div');
+                div.className = 'block-option';
+                div.style.backgroundColor = '#' + BLOCKS[key].color.toString(16).padStart(6, '0');
+                if (index === 0) div.classList.add('active');
+                
+                // Add number label
+                div.innerText = index + 1;
+                
+                div.onclick = () => {
+                    selectedBlockType = key;
+                    document.querySelectorAll('.block-option').forEach(el => el.classList.remove('active'));
+                    div.classList.add('active');
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // --- Controls & Animation ---
+
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW': moveForward = true; break;
+                case 'ArrowLeft':
+                case 'KeyA': moveLeft = true; break;
+                case 'ArrowDown':
+                case 'KeyS': moveBackward = true; break;
+                case 'ArrowRight':
+                case 'KeyD': moveRight = true; break;
+                case 'Space': 
+                    if (canJump === true) velocity.y += 350;
+                    canJump = false;
+                    break;
+                // Number keys for block selection
+                case 'Digit1': selectBlock(0); break;
+                case 'Digit2': selectBlock(1); break;
+                case 'Digit3': selectBlock(2); break;
+                case 'Digit4': selectBlock(3); break;
+                case 'Digit5': selectBlock(4); break;
+            }
+        }
+
+        function selectBlock(index) {
+            const options = document.querySelectorAll('.block-option');
+            if (options[index]) options[index].click();
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'ArrowUp':
+                case 'KeyW': moveForward = false; break;
+                case 'ArrowLeft':
+                case 'KeyA': moveLeft = false; break;
+                case 'ArrowDown':
+                case 'KeyS': moveBackward = false; break;
+                case 'ArrowRight':
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isGameActive) return;
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            if (controls.isLocked === true) {
+                // Decay velocity
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 100.0 * delta; // Gravity
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                // Speed calculation based on character
+                const baseSpeed = 400.0;
+                const speed = currentCharacter ? baseSpeed * currentCharacter.speedMultiplier : baseSpeed;
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                controls.getObject().position.y += (velocity.y * delta);
+
+                // Simple floor collision
+                if (controls.getObject().position.y < 10) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = 10;
+                    canJump = true;
+                }
+                
+                // Basic block collision (very simple, just prevents falling through specific blocks if we wanted to implement full physics, but for now we stick to floor plane logic for simplicity + some height checks)
+                // For a more robust voxel engine, we'd check neighbors. Here we just keep player above y=0 usually.
+            }
+
+            // Hand animation (bobbing)
+            const hand = camera.getObjectByName("playerHand");
+            if (hand) {
+                if (moveForward || moveBackward || moveLeft || moveRight) {
+                    hand.position.y = -0.3 + Math.sin(time * 0.015) * 0.02;
+                    hand.rotation.z = Math.sin(time * 0.015) * 0.05;
+                } else {
+                    hand.position.y = -0.3;
+                    hand.rotation.z = 0;
+                }
+            }
+
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+
+        // Run
+        init();
+
+    </script>
+</body>
+</html>
