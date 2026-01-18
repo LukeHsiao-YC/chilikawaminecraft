@@ -836,12 +836,14 @@
             // 3. Blue Hachi Pattern
             ctx.fillStyle = blueColor;
             ctx.beginPath();
-            ctx.moveTo(-29, -5);
-            ctx.quadraticCurveTo(-20, -10, -5, -25); // Go UP to center
-            ctx.lineTo(5, -25); // Across top center (narrow)
-            ctx.quadraticCurveTo(20, -10, 29, -5); // Go DOWN to right
-            ctx.lineTo(29, -30); // Fill top corners
-            ctx.lineTo(-29, -30);
+            // Lowered bangs: sides from 0 to 2, center peak from -25 to -16
+            ctx.moveTo(-29, 2); 
+            ctx.quadraticCurveTo(-15, -5, -4, -16); 
+            ctx.lineTo(4, -16); 
+            ctx.quadraticCurveTo(15, -5, 29, 2); 
+            
+            ctx.lineTo(29, -35); 
+            ctx.lineTo(-29, -35);
             ctx.fill();
             
             // 4. Tail
