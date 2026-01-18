@@ -388,7 +388,11 @@
             { name: '圍牆', cost: 20, icon: '🧱', type: 3, w: 40, h: 40, unlockLv: 2, action: "......" },
             { name: '郎拉麵', cost: 300, icon: '🍜', type: 4, w: 100, h: 80, unlockLv: 3, action: "郎！" },
             { name: '溫泉', cost: 500, icon: '♨️', type: 5, w: 120, h: 100, unlockLv: 5, action: "呼～好舒服" },
-            { name: '吉伊像', cost: 1000, icon: '🗿', type: 6, w: 60, h: 100, unlockLv: 8, action: "哇..." }
+            { name: '吉伊像', cost: 1000, icon: '🗿', type: 6, w: 60, h: 100, unlockLv: 8, action: "哇..." },
+            { name: '坐墊', cost: 80, icon: '🟡', type: 7, w: 40, h: 40, unlockLv: 1, action: "軟軟的～" },
+            { name: '桌子', cost: 150, icon: '🪑', type: 8, w: 60, h: 40, unlockLv: 2, action: "放在這剛好" },
+            { name: '大樹', cost: 200, icon: '🌳', type: 9, w: 80, h: 120, unlockLv: 3, action: "好涼快～" },
+            { name: '路燈', cost: 250, icon: '💡', type: 10, w: 20, h: 100, unlockLv: 4, action: "亮亮的" }
         ];
 
         const CHAR_STATS = {
@@ -990,6 +994,31 @@
                 ctx.beginPath(); ctx.arc(0, -60, 25, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(-15, -75, 8, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.arc(15, -75, 8, 0, Math.PI*2); ctx.fill();
+            } else if (b.type === 7) { // Cushion
+                ctx.fillStyle = '#fff59d'; // Yellowish
+                ctx.beginPath(); ctx.ellipse(0, 0, 20, 15, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = '#fbc02d'; ctx.lineWidth = 2; ctx.stroke();
+            } else if (b.type === 8) { // Table
+                ctx.fillStyle = '#8d6e63'; // Brown wood
+                ctx.fillRect(-30, -20, 60, 10); // Top
+                ctx.fillRect(-25, -20, 5, 20); // Leg L
+                ctx.fillRect(20, -20, 5, 20); // Leg R
+            } else if (b.type === 9) { // Tree
+                ctx.fillStyle = '#5d4037'; // Trunk
+                ctx.fillRect(-10, -40, 20, 40);
+                ctx.fillStyle = '#66bb6a'; // Leaves
+                ctx.beginPath(); ctx.arc(0, -50, 40, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-20, -40, 25, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(20, -40, 25, 0, Math.PI*2); ctx.fill();
+            } else if (b.type === 10) { // Lamp
+                ctx.fillStyle = '#424242'; // Pole
+                ctx.fillRect(-5, -90, 10, 90);
+                ctx.fillStyle = '#fff176'; // Light
+                ctx.beginPath(); ctx.arc(0, -90, 15, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#fffde7'; // Glow
+                ctx.beginPath(); ctx.arc(0, -90, 30, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 1.0;
             }
             ctx.restore();
         }
