@@ -472,15 +472,11 @@
             // Collision Detection with Buildings
             for (let b of buildings) {
                 let item = BUILD_ITEMS[b.type];
-                // Approximate collision box based on shadow size (footprint)
-                // Center of collision box is roughly b.y + 10 due to shadow offset in drawBuilding
                 let centerX = b.x;
                 let centerY = b.y + 10;
                 let radiusX = item.w / 2;
-                let radiusY = 15; // Vertical footprint is smaller
+                let radiusY = 15; 
 
-                // Simple check: Player center vs Ellipse-ish box
-                // Using a slightly expanded rectangular check for simplicity and stability
                 if (Math.abs(nextX - centerX) < (radiusX + playerRadius - 5) && 
                     Math.abs(nextY - centerY) < (radiusY + playerRadius - 5)) {
                     collision = true;
@@ -815,35 +811,44 @@
         }
 
         function drawHachiware(ctx) {
-            // Ears (Pointy)
+            const blueColor = '#4da6ff'; 
+
+            // 1. Ears (Behind)
+            ctx.fillStyle = blueColor;
+            ctx.strokeStyle = '#3e2723';
+            ctx.lineWidth = 1.5;
+
+            // Left Ear
+            ctx.beginPath();
+            ctx.moveTo(-20, -15); ctx.lineTo(-35, -35); ctx.lineTo(-10, -20);
+            ctx.fill(); ctx.stroke();
+
+            // Right Ear
+            ctx.beginPath();
+            ctx.moveTo(20, -15); ctx.lineTo(35, -35); ctx.lineTo(10, -20);
+            ctx.fill(); ctx.stroke();
+
+            // 2. Head (White)
             ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.moveTo(-25, -10); ctx.lineTo(-35, -35); ctx.lineTo(-10, -20); ctx.fill(); 
-            ctx.beginPath(); ctx.moveTo(25, -10); ctx.lineTo(35, -35); ctx.lineTo(10, -20); ctx.fill(); 
+            ctx.beginPath(); ctx.ellipse(0, 5, 29, 26, 0, 0, Math.PI*2); 
+            ctx.fill(); ctx.stroke();
+
+            // 3. Blue Hachi Pattern
+            ctx.fillStyle = blueColor;
+            ctx.beginPath();
+            ctx.moveTo(-29, -5);
+            ctx.quadraticCurveTo(-20, -10, -5, -25); // Go UP to center
+            ctx.lineTo(5, -25); // Across top center (narrow)
+            ctx.quadraticCurveTo(20, -10, 29, -5); // Go DOWN to right
+            ctx.lineTo(29, -30); // Fill top corners
+            ctx.lineTo(-29, -30);
+            ctx.fill();
             
-            // Blue Tips
-            ctx.fillStyle = '#42a5f5';
-            ctx.beginPath(); ctx.moveTo(-28, -18); ctx.lineTo(-35, -35); ctx.lineTo(-15, -24); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(28, -18); ctx.lineTo(35, -35); ctx.lineTo(15, -24); ctx.fill();
+            // 4. Tail
+            ctx.fillStyle = blueColor;
+            ctx.beginPath(); ctx.arc(-20, 20, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
 
-            // Body
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.fill();
-
-            // Hachi Marking
-            ctx.fillStyle = '#42a5f5';
-            ctx.beginPath(); ctx.moveTo(-20, -15); ctx.quadraticCurveTo(0, 5, 20, -15); 
-            ctx.quadraticCurveTo(25, -18, 15, -25); ctx.quadraticCurveTo(0, -22, -15, -25); ctx.fill();
-
-            // Outline
-            ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-25, -10); ctx.lineTo(-35, -35); ctx.lineTo(-10, -15); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(25, -10); ctx.lineTo(35, -35); ctx.lineTo(10, -15); ctx.stroke();
-
-            // Tail (Blue)
-            ctx.fillStyle = '#42a5f5';
-            ctx.beginPath(); ctx.arc(-20, 20, 5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-
+            // 5. Face
             drawFace(ctx, 'hachiware');
         }
 
