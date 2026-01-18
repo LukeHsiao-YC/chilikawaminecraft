@@ -382,13 +382,13 @@
         const ZHUYIN_KEYS = Object.keys(ZHUYIN_MAP);
 
         const BUILD_ITEMS = [
-            { name: '蘑菇屋', cost: 100, icon: '🍄', type: 0, w: 80, h: 80, unlockLv: 1 },
-            { name: '草蓆', cost: 50, icon: '🛏️', type: 1, w: 50, h: 30, unlockLv: 1 },
-            { name: '花圃', cost: 30, icon: '🌷', type: 2, w: 40, h: 40, unlockLv: 2 },
-            { name: '圍牆', cost: 20, icon: '🧱', type: 3, w: 40, h: 40, unlockLv: 2 },
-            { name: '郎拉麵', cost: 300, icon: '🍜', type: 4, w: 100, h: 80, unlockLv: 3 },
-            { name: '溫泉', cost: 500, icon: '♨️', type: 5, w: 120, h: 100, unlockLv: 5 },
-            { name: '吉伊像', cost: 1000, icon: '🗿', type: 6, w: 60, h: 100, unlockLv: 8 }
+            { name: '蘑菇屋', cost: 100, icon: '🍄', type: 0, w: 80, h: 80, unlockLv: 1, action: "這是我家！" },
+            { name: '草蓆', cost: 50, icon: '🛏️', type: 1, w: 50, h: 30, unlockLv: 1, action: "Zzz..." },
+            { name: '花圃', cost: 30, icon: '🌷', type: 2, w: 40, h: 40, unlockLv: 2, action: "香香的～" },
+            { name: '圍牆', cost: 20, icon: '🧱', type: 3, w: 40, h: 40, unlockLv: 2, action: "......" },
+            { name: '郎拉麵', cost: 300, icon: '🍜', type: 4, w: 100, h: 80, unlockLv: 3, action: "郎！" },
+            { name: '溫泉', cost: 500, icon: '♨️', type: 5, w: 120, h: 100, unlockLv: 5, action: "呼～好舒服" },
+            { name: '吉伊像', cost: 1000, icon: '🗿', type: 6, w: 60, h: 100, unlockLv: 8, action: "哇..." }
         ];
 
         const CHAR_STATS = {
@@ -416,11 +416,12 @@
         let expToNextLevel = 100;
         
         // Home State
-        let homePlayer = { x: 1000, y: 1000, facing: 1 };
+        let homePlayer = { x: 1000, y: 1000, facing: 1, speech: null, speechTimer: 0 };
         let buildings = []; // {x, y, typeId}
         let camera = { x: 0, y: 0 };
         let isBuildMenuOpen = false;
         let selectedBuildIdx = 0;
+        let nearbyBuildingIdx = -1; // Index of building player is close to
 
         // Work State
         let weedPlayer = { x: WEED_MAP_WIDTH/2, y: WEED_MAP_HEIGHT/2, facing: 1 };
@@ -462,12 +463,55 @@
             if (keys.a) dx = -speed;
             if (keys.d) dx = speed;
 
-            homePlayer.x += dx;
-            homePlayer.y += dy;
-            homePlayer.x = Math.max(50, Math.min(HOME_WIDTH-50, homePlayer.x));
-            homePlayer.y = Math.max(50, Math.min(HOME_HEIGHT-50, homePlayer.y));
+            // Proposed new position
+            let nextX = homePlayer.x + dx;
+            let nextY = homePlayer.y + dy;
+            let playerRadius = 20;
+            let collision = false;
+
+            // Collision Detection with Buildings
+            for (let b of buildings) {
+                let item = BUILD_ITEMS[b.type];
+                // Approximate collision box based on shadow size (footprint)
+                // Center of collision box is roughly b.y + 10 due to shadow offset in drawBuilding
+                let centerX = b.x;
+                let centerY = b.y + 10;
+                let radiusX = item.w / 2;
+                let radiusY = 15; // Vertical footprint is smaller
+
+                // Simple check: Player center vs Ellipse-ish box
+                // Using a slightly expanded rectangular check for simplicity and stability
+                if (Math.abs(nextX - centerX) < (radiusX + playerRadius - 5) && 
+                    Math.abs(nextY - centerY) < (radiusY + playerRadius - 5)) {
+                    collision = true;
+                    break;
+                }
+            }
+
+            if (!collision) {
+                homePlayer.x = Math.max(50, Math.min(HOME_WIDTH-50, nextX));
+                homePlayer.y = Math.max(50, Math.min(HOME_HEIGHT-50, nextY));
+            }
             
             if (dx !== 0) homePlayer.facing = Math.sign(dx);
+
+            // Interaction Check
+            nearbyBuildingIdx = -1;
+            let closestDist = 9999;
+            for (let i = 0; i < buildings.length; i++) {
+                let b = buildings[i];
+                let item = BUILD_ITEMS[b.type];
+                let dist = Math.hypot(homePlayer.x - b.x, homePlayer.y - (b.y + 10));
+                // Interaction range roughly related to object size
+                if (dist < (item.w/2 + 50) && dist < closestDist) {
+                    closestDist = dist;
+                    nearbyBuildingIdx = i;
+                }
+            }
+
+            // Speech Timer
+            if (homePlayer.speechTimer > 0) homePlayer.speechTimer--;
+            else homePlayer.speech = null;
 
             camera.x = homePlayer.x - VIEW_WIDTH/2;
             camera.y = homePlayer.y - VIEW_HEIGHT/2;
@@ -498,6 +542,17 @@
                 else drawBuilding(item.obj);
             });
 
+            // Draw Speech Bubble
+            if (homePlayer.speech) {
+                drawSpeechBubble(homePlayer.x, homePlayer.y - 50, homePlayer.speech);
+            }
+
+            // Draw Interaction Hint
+            if (nearbyBuildingIdx !== -1) {
+                let b = buildings[nearbyBuildingIdx];
+                drawInteractionHint(b.x, b.y - 60);
+            }
+
             if (isBuildMenuOpen) {
                 let worldMx = mouse.x + camera.x;
                 let worldMy = mouse.y + camera.y;
@@ -505,6 +560,53 @@
             }
 
             ctx.restore();
+        }
+
+        function drawSpeechBubble(x, y, text) {
+            ctx.font = "bold 16px sans-serif";
+            let width = ctx.measureText(text).width + 20;
+            let height = 30;
+            
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            
+            // Bubble
+            ctx.beginPath();
+            ctx.roundRect(x - width/2, y - height, width, height, 10);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Pointer
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 5, y - 5); // Connect to bubble bottom
+            ctx.lineTo(x + 5, y - 5);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "black";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, x, y - height/2);
+        }
+
+        function drawInteractionHint(x, y) {
+            let bob = Math.sin(Date.now() * 0.01) * 5;
+            let text = "按空白鍵";
+            
+            ctx.font = "bold 14px sans-serif";
+            let width = ctx.measureText(text).width + 16;
+            
+            ctx.fillStyle = "rgba(0,0,0,0.7)";
+            ctx.beginPath();
+            ctx.roundRect(x - width/2, y - 30 + bob, width, 24, 12);
+            ctx.fill();
+            
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, x, y - 18 + bob);
         }
 
         // --- WORK LOGIC ---
@@ -668,43 +770,138 @@
             }
         }
 
-        // --- Shared Drawing ---
+        // --- Character Drawing Logic (Refined) ---
         function drawPlayer(x, y, facing) {
             ctx.save();
             ctx.translate(x, y);
             if (facing < 0) ctx.scale(-1, 1);
 
+            // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath(); ctx.ellipse(0, 25, 20, 8, 0, 0, Math.PI*2); ctx.fill();
 
-            let color = CHAR_STATS[selectedChar].color;
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI*2); ctx.fill();
-
-            if (selectedChar === 'usagi') {
-                ctx.fillStyle = color;
-                ctx.beginPath(); ctx.ellipse(-15, -20, 8, 20, -0.2, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(15, -20, 8, 20, 0.2, 0, Math.PI*2); ctx.fill();
-            } else if (selectedChar === 'hachiware') {
-                ctx.fillStyle = '#42a5f5';
-                ctx.beginPath(); ctx.arc(0, -10, 25, Math.PI, 0); ctx.fill(); 
-                ctx.fillStyle = color;
-                ctx.beginPath(); ctx.moveTo(-25,-10); ctx.quadraticCurveTo(0, 10, 25, -10); ctx.fill();
-            } else {
-                ctx.beginPath(); ctx.arc(-20, -15, 8, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(20, -15, 8, 0, Math.PI*2); ctx.fill();
-            }
-
-            ctx.fillStyle = '#3e2723';
-            ctx.beginPath(); ctx.arc(-8, 0, 3, 0, Math.PI*2); ctx.fill(); 
-            ctx.beginPath(); ctx.arc(8, 0, 3, 0, Math.PI*2); ctx.fill(); 
-            
-            ctx.fillStyle = '#ffcdd2';
-            ctx.globalAlpha = 0.6;
-            ctx.beginPath(); ctx.arc(-15, 5, 5, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(15, 5, 5, 0, Math.PI*2); ctx.fill();
+            if (selectedChar === 'chiikawa') drawChiikawa(ctx);
+            else if (selectedChar === 'hachiware') drawHachiware(ctx);
+            else if (selectedChar === 'usagi') drawUsagi(ctx);
 
             ctx.restore();
+        }
+
+        function drawChiikawa(ctx) {
+            // Body (White)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); // Head/Body
+            ctx.fill();
+            
+            // Ears (Round)
+            ctx.beginPath();
+            ctx.arc(-20, -15, 9, 0, Math.PI*2); // L
+            ctx.arc(20, -15, 9, 0, Math.PI*2); // R
+            ctx.fill();
+            
+            // Outline
+            ctx.strokeStyle = '#3e2723'; // Dark brown
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(-20, -15, 9, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(20, -15, 9, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.stroke();
+
+            // Tail
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(-20, 20, 5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+            drawFace(ctx, 'chiikawa');
+        }
+
+        function drawHachiware(ctx) {
+            // Ears (Pointy)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.moveTo(-25, -10); ctx.lineTo(-35, -35); ctx.lineTo(-10, -20); ctx.fill(); 
+            ctx.beginPath(); ctx.moveTo(25, -10); ctx.lineTo(35, -35); ctx.lineTo(10, -20); ctx.fill(); 
+            
+            // Blue Tips
+            ctx.fillStyle = '#42a5f5';
+            ctx.beginPath(); ctx.moveTo(-28, -18); ctx.lineTo(-35, -35); ctx.lineTo(-15, -24); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(28, -18); ctx.lineTo(35, -35); ctx.lineTo(15, -24); ctx.fill();
+
+            // Body
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.fill();
+
+            // Hachi Marking
+            ctx.fillStyle = '#42a5f5';
+            ctx.beginPath(); ctx.moveTo(-20, -15); ctx.quadraticCurveTo(0, 5, 20, -15); 
+            ctx.quadraticCurveTo(25, -18, 15, -25); ctx.quadraticCurveTo(0, -22, -15, -25); ctx.fill();
+
+            // Outline
+            ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-25, -10); ctx.lineTo(-35, -35); ctx.lineTo(-10, -15); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(25, -10); ctx.lineTo(35, -35); ctx.lineTo(10, -15); ctx.stroke();
+
+            // Tail (Blue)
+            ctx.fillStyle = '#42a5f5';
+            ctx.beginPath(); ctx.arc(-20, 20, 5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+            drawFace(ctx, 'hachiware');
+        }
+
+        function drawUsagi(ctx) {
+            ctx.fillStyle = '#fff176'; // Yellow
+            
+            // Ears (Long)
+            ctx.beginPath(); ctx.ellipse(-15, -35, 8, 20, -0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(15, -35, 8, 20, 0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+            // Body
+            ctx.beginPath(); ctx.ellipse(0, 5, 28, 25, 0, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5; ctx.stroke();
+            
+            // Tail (White Fluffy)
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(-20, 20, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+            drawFace(ctx, 'usagi');
+        }
+
+        function drawFace(ctx, type) {
+            ctx.fillStyle = '#3e2723'; 
+            
+            if (type === 'chiikawa') {
+                // Eyes (Dots)
+                ctx.beginPath(); ctx.arc(-10, 0, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(10, 0, 3, 0, Math.PI*2); ctx.fill();
+                // Eyebrows
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(-15, -10); ctx.quadraticCurveTo(-10, -12, -5, -10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(5, -10); ctx.quadraticCurveTo(10, -12, 15, -10); ctx.stroke();
+                // Mouth
+                ctx.beginPath(); ctx.moveTo(-2, 8); ctx.quadraticCurveTo(0, 10, 2, 8); ctx.stroke();
+            } else if (type === 'hachiware') {
+                // Eyes
+                ctx.beginPath(); ctx.arc(-10, 0, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(10, 0, 3, 0, Math.PI*2); ctx.fill();
+                // Eyebrows
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(-12, -8); ctx.lineTo(-6, -6); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, -8); ctx.lineTo(6, -6); ctx.stroke();
+                // Mouth (w)
+                ctx.beginPath(); ctx.moveTo(-4, 8); ctx.lineTo(0, 9); ctx.lineTo(4, 8); ctx.stroke();
+            } else if (type === 'usagi') {
+                // Eyes (Big Dots)
+                ctx.beginPath(); ctx.arc(-12, 0, 4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(12, 0, 4, 0, Math.PI*2); ctx.fill();
+                // Mouth (Bunny)
+                ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(0, 7); ctx.lineTo(3, 8); ctx.stroke();
+            }
+
+            // Blush
+            ctx.fillStyle = '#ffcdd2';
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath(); ctx.arc(-18, 5, 5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(18, 5, 5, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1.0;
         }
 
         function drawWeed(x, y, char) {
@@ -729,6 +926,7 @@
 
             ctx.fillStyle = '#5c6bc0';
             ctx.beginPath(); ctx.arc(0, -15, 20, 0, Math.PI*2); ctx.fill();
+            // Wings
             ctx.fillStyle = 'rgba(255,255,255,0.7)';
             ctx.beginPath(); ctx.ellipse(-20, -25, 12, 6, -0.5, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.ellipse(20, -25, 12, 6, 0.5, 0, Math.PI*2); ctx.fill();
@@ -1033,11 +1231,21 @@
 
         // --- Event Listeners ---
         window.addEventListener('keydown', e => {
-            if (currentMode === 'HOME' || (currentMode === 'WORK' && workModeType === 'weed')) {
+            if (currentMode === 'HOME') {
                 if(e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
                 if(e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
                 if(e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
                 if(e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+                
+                // Interaction key
+                if (e.code === 'Space' && nearbyBuildingIdx !== -1) {
+                    let b = buildings[nearbyBuildingIdx];
+                    let item = BUILD_ITEMS[b.type];
+                    if (item && item.action) {
+                        homePlayer.speech = item.action;
+                        homePlayer.speechTimer = 120; // 2 seconds
+                    }
+                }
             } 
             
             if (currentMode === 'WORK') {
