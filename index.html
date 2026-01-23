@@ -1273,14 +1273,15 @@
 
         // --- Event Listeners ---
         window.addEventListener('keydown', e => {
-            if (currentMode === 'HOME') {
+            if (currentMode === 'HOME' || (currentMode === 'WORK' && workModeType === 'weed')) {
+                // FIXED: Use e.code to ignore IME (Zhuyin) interference
                 if(e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
                 if(e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
                 if(e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
                 if(e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
                 
-                // Interaction key
-                if (e.code === 'Space' && nearbyBuildingIdx !== -1) {
+                // Interaction key (Space)
+                if (currentMode === 'HOME' && e.code === 'Space' && nearbyBuildingIdx !== -1) {
                     let b = buildings[nearbyBuildingIdx];
                     let item = BUILD_ITEMS[b.type];
                     if (item && item.action) {
